@@ -1,0 +1,3 @@
+requests>=2.32
+tenacity>=8.2
+duckdb>=1.1

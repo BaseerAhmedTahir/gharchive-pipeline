@@ -1,0 +1,18 @@
+# Data lake — never commit data volumes
+data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Airflow (stage 4)
+logs/
+airflow.cfg
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
