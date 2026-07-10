@@ -53,7 +53,11 @@ with DAG(
     schedule="@hourly",
     start_date=pendulum.datetime(2026, 7, 9, tz="UTC"),
     catchup=True,
-    max_active_runs=4,
+    # sized from measured memory budget: the ~3.7GiB Docker VM has ~1.9GiB
+    # headroom after Airflow's own services, and each task process peaks at
+    # ~python(200MB)+duckdb(256MB); 2 concurrent runs fits with margin,
+    # 4 demonstrably did not
+    max_active_runs=2,
     dagrun_timeout=timedelta(hours=2),
     tags=["gharchive"],
     default_args={

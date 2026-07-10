@@ -36,10 +36,10 @@ x-airflow-common:
     QUALITY_MIN_ROWS: ${QUALITY_MIN_ROWS:-50000}
     # container-safe DuckDB limits: DuckDB sees host RAM, not the cgroup cap,
     # so an explicit limit prevents the container being OOM-killed (exit 137).
-    # Sized for max_active_runs=4 concurrent transforms on a ~4GB Docker VM;
-    # the spill test proves 64MB suffices for 3x a normal hour, so 512MB is
-    # ample headroom, not a constraint.
-    DUCKDB_MEMORY_LIMIT: ${DUCKDB_MEMORY_LIMIT:-512MB}
+    # Sized from the measured budget (8GB host, ~3.7GiB VM, ~1.9GiB left
+    # after Airflow services) with max_active_runs=2; the spill test proves
+    # 64MB handles 3x a normal hour, so 256MB is still 4x that proof.
+    DUCKDB_MEMORY_LIMIT: ${DUCKDB_MEMORY_LIMIT:-256MB}
     DUCKDB_THREADS: ${DUCKDB_THREADS:-2}
     ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
   volumes:

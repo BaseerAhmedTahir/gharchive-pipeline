@@ -34,7 +34,7 @@ def test_hourly_wiring_and_retry_policies(dagbag):
     dag = dagbag.get_dag("gharchive_hourly")
 
     assert dag.catchup is True
-    assert dag.max_active_runs == 4
+    assert dag.max_active_runs == 2  # sized from measured VM memory budget
     assert dag.get_task("transform").upstream_task_ids == {"ingest"}
     assert dag.get_task("quality_gate").upstream_task_ids == {"transform"}
     # per-failure-class retry policy
