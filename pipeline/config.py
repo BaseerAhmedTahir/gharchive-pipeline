@@ -42,6 +42,17 @@ class Config:
     # efficient scans at our per-hour volumes.
     parquet_row_group_size: int = 20_000
 
+    # Quality gate. The row floor is set from measured data (real hours run
+    # ~160k events): 50k catches truncated/partial hours without
+    # false-alarming on normal variation. Tolerance covers GH Archive's
+    # collection-hour vs event-time boundary spill (soft check only).
+    quality_min_rows: int = 50_000
+    quality_ts_tolerance_minutes: int = 60
+
+    # Trending mart: minimum human (non-bot) events per day before a repo is
+    # scored — avoids huge trend ratios on tiny denominators.
+    trending_min_daily_events: int = 20
+
     @property
     def bronze_dir(self) -> Path:
         return self.data_root / "bronze"
@@ -70,6 +81,7 @@ class Config:
             silver_retention_days=int(os.environ.get("SILVER_RETENTION_DAYS", "10")),
             duckdb_memory_limit=os.environ.get("DUCKDB_MEMORY_LIMIT", "2GB"),
             duckdb_threads=int(os.environ.get("DUCKDB_THREADS", "4")),
+            quality_min_rows=int(os.environ.get("QUALITY_MIN_ROWS", "50000")),
         )
 
 

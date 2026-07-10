@@ -44,6 +44,23 @@ log = logging.getLogger(__name__)
 
 SILVER_FILENAME = "events.parquet"
 
+# Single source of truth for the silver schema (quality gate checks against
+# this; keep in sync with _PROJECTION below).
+SILVER_COLUMNS = (
+    "id",
+    "type",
+    "created_at",
+    "public",
+    "actor_login",
+    "repo_id",
+    "repo_name",
+    "org_login",
+    "payload_action",
+    "pr_number",
+    "pr_merged_at",
+    "push_commits",
+)
+
 
 class BronzeNotFoundError(Exception):
     """The bronze partition for this hour hasn't been ingested."""
@@ -84,6 +101,9 @@ _PROJECTION = """
     org.login AS org_login,
     json_extract_string(payload, '$.action') AS payload_action,
     TRY_CAST(json_extract_string(payload, '$.pull_request.number') AS BIGINT) AS pr_number,
+    -- NULL in current data: 2026 GH Archive slimmed PR payloads to
+    -- {url,id,number,head,base}. Kept for schema stability and because
+    -- older archive eras do carry it.
     TRY_CAST(json_extract_string(payload, '$.pull_request.merged_at') AS TIMESTAMP) AS pr_merged_at,
     TRY_CAST(json_extract_string(payload, '$.size') AS INTEGER) AS push_commits
 """
