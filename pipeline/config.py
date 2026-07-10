@@ -32,6 +32,16 @@ class Config:
     http_retry_initial_wait_seconds: float = 1.0
     download_chunk_bytes: int = 1 << 20
 
+    # Explicit DuckDB session limits so a big hour spills to disk (via
+    # temp_directory) instead of OOMing the host or the Airflow container.
+    duckdb_memory_limit: str = "2GB"
+    duckdb_threads: int = 4
+    # The Parquet writer buffers one full row group in memory, so this bounds
+    # writer memory at roughly row_group_size * row_width. 20k keeps that in
+    # the tens of MB even for wide rows while staying large enough for
+    # efficient scans at our per-hour volumes.
+    parquet_row_group_size: int = 20_000
+
     @property
     def bronze_dir(self) -> Path:
         return self.data_root / "bronze"
@@ -44,12 +54,22 @@ class Config:
     def gold_dir(self) -> Path:
         return self.data_root / "gold"
 
+    @property
+    def silver_events_dir(self) -> Path:
+        return self.silver_dir / "events"
+
+    @property
+    def duckdb_tmp_dir(self) -> Path:
+        return self.data_root / ".duckdb_tmp"
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
             data_root=Path(os.environ.get("DATA_ROOT", str(_PROJECT_ROOT / "data"))),
             bronze_retention_days=int(os.environ.get("BRONZE_RETENTION_DAYS", "3")),
             silver_retention_days=int(os.environ.get("SILVER_RETENTION_DAYS", "10")),
+            duckdb_memory_limit=os.environ.get("DUCKDB_MEMORY_LIMIT", "2GB"),
+            duckdb_threads=int(os.environ.get("DUCKDB_THREADS", "4")),
         )
 
 
