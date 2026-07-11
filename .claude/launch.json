@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "D:\\Claude Code\\Project1\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "-m", "streamlit", "run", "dashboard/app.py",
+        "--server.port", "8501",
+        "--server.headless", "true",
+        "--browser.gatherUsageStats", "false"
+      ],
+      "port": 8501
+    }
+  ]
+}
