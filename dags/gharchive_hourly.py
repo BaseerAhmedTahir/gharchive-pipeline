@@ -31,20 +31,44 @@ def _hour(data_interval_start):
 
 def _ingest(*, data_interval_start, **_):
     from pipeline.ingest import ingest_hour
+    from pipeline.metrics import record
 
-    ingest_hour(_hour(data_interval_start))
+    hour = _hour(data_interval_start)
+    r = ingest_hour(hour)
+    record(
+        "ingest", hour,
+        bytes_downloaded=r.bytes_downloaded,
+        duration_seconds=r.duration_seconds,
+        skipped=r.skipped,
+    )
 
 
 def _transform(*, data_interval_start, **_):
+    from pipeline.metrics import record
     from pipeline.transform import transform_hour
 
-    transform_hour(_hour(data_interval_start))
+    hour = _hour(data_interval_start)
+    r = transform_hour(hour)
+    record(
+        "transform", hour,
+        rows_in=r.rows_in,
+        rows_out=r.rows_out,
+        bytes_out=r.bytes_out,
+        duration_seconds=r.duration_seconds,
+    )
 
 
 def _quality_gate(*, data_interval_start, **_):
+    from pipeline.metrics import record
     from pipeline.quality import check_hour
 
-    check_hour(_hour(data_interval_start))
+    hour = _hour(data_interval_start)
+    report = check_hour(hour)  # raises on hard failure -> no record, task fails
+    record(
+        "quality_gate", hour,
+        rows=report.rows,
+        soft_warnings=len(report.soft_warnings),
+    )
 
 
 with DAG(

@@ -217,3 +217,40 @@ elif page == "Pipeline ops":
         pd.DataFrame(ops["gold_marts"], columns=["mart", "size_mb"]).round(2),
         width="stretch",
     )
+
+    st.subheader("Per-run task metrics")
+    summary_row = load("throughput_summary")
+    runs = pd.DataFrame(load("run_metrics"))
+    if summary_row is None or runs.empty:
+        st.info("No per-run metrics yet — they appear after the first instrumented DAG run.")
+    else:
+        m1, m2, m3 = st.columns(3)
+        m1.metric(
+            "Median transform throughput",
+            f"{summary_row['median_events_per_sec']:,.0f} events/s",
+        )
+        m2.metric("Median transform time", f"{summary_row['median_transform_seconds']:.1f} s")
+        m3.metric(
+            "Raw data downloaded",
+            f"{summary_row['gb_ingested']:.2f} GB",
+            help=f"across {summary_row['download_runs']} non-skipped ingest runs",
+        )
+        st.altair_chart(
+            alt.Chart(runs)
+            .mark_line(strokeWidth=2, point=alt.OverlayMarkDef(size=40))
+            .encode(
+                x=alt.X("hour:T", title=None),
+                y=alt.Y("duration_seconds:Q", title="task seconds"),
+                color=alt.Color(
+                    "kind:N",
+                    scale=alt.Scale(
+                        domain=["ingest", "transform", "quality_gate"],
+                        range=[SERIES[0], SERIES[1], SERIES[2]],
+                    ),
+                    title=None,
+                ),
+                tooltip=["hour:T", "kind:N", "duration_seconds:Q", "rows_in:Q"],
+            )
+            .properties(height=260),
+            width="stretch",
+        )

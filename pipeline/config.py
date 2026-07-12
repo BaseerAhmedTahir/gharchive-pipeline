@@ -73,6 +73,10 @@ class Config:
     def duckdb_tmp_dir(self) -> Path:
         return self.data_root / ".duckdb_tmp"
 
+    @property
+    def metrics_dir(self) -> Path:
+        return self.data_root / "metrics"
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(

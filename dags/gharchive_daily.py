@@ -17,16 +17,29 @@ from airflow.sdk import DAG
 from pipeline.alerts import notify_failure
 
 
-def _build_gold(**_):
+def _build_gold(*, data_interval_start, **_):
     from pipeline.aggregate import build_gold
+    from pipeline.metrics import record
 
-    build_gold()
+    r = build_gold()
+    record(
+        "build_gold",
+        data_interval_start.replace(tzinfo=None),
+        duration_seconds=r.duration_seconds,
+        **{f"rows_{mart}": n for mart, n in r.rows_per_mart.items()},
+    )
 
 
-def _prune_retention(**_):
+def _prune_retention(*, data_interval_start, **_):
     from pipeline.cleanup import prune_retention
+    from pipeline.metrics import record
 
-    prune_retention()
+    r = prune_retention()
+    record(
+        "prune_retention",
+        data_interval_start.replace(tzinfo=None),
+        partitions_removed=len(r.removed),
+    )
 
 
 with DAG(

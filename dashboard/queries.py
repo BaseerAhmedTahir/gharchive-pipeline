@@ -168,6 +168,52 @@ def hourly_volume(con, cfg: Config) -> list[dict]:
     )
 
 
+def _metrics_glob(cfg: Config) -> str | None:
+    if not any(cfg.metrics_dir.glob("date=*/*.json")):
+        return None
+    return f"{cfg.metrics_dir.as_posix()}/date=*/*.json"
+
+
+def run_metrics(con, cfg: Config) -> list[dict]:
+    """Per-run task metrics history (empty before the first instrumented run)."""
+    glob = _metrics_glob(cfg)
+    if glob is None:
+        return []
+    return _rows(
+        con.execute(
+            f"""SELECT kind, CAST(hour AS TIMESTAMP) AS hour, duration_seconds,
+                       rows_in, rows_out, bytes_downloaded
+                FROM read_json('{glob}', format='auto', union_by_name=true)
+                WHERE kind IN ('ingest', 'transform', 'quality_gate')
+                ORDER BY hour, kind"""
+        )
+    )
+
+
+def throughput_summary(con, cfg: Config) -> dict | None:
+    glob = _metrics_glob(cfg)
+    if glob is None:
+        return None
+    row = con.execute(
+        f"""
+        SELECT
+            count(*) FILTER (kind = 'transform') AS transform_runs,
+            median(rows_in / duration_seconds) FILTER (kind = 'transform'),
+            median(duration_seconds) FILTER (kind = 'transform'),
+            sum(bytes_downloaded) FILTER (kind = 'ingest') / 1e9,
+            count(*) FILTER (kind = 'ingest' AND skipped = false)
+        FROM read_json('{glob}', format='auto', union_by_name=true)
+        """
+    ).fetchone()
+    return {
+        "transform_runs": row[0],
+        "median_events_per_sec": row[1],
+        "median_transform_seconds": row[2],
+        "gb_ingested": row[3],
+        "download_runs": row[4],
+    }
+
+
 def ops_snapshot(cfg: Config) -> dict:
     """Filesystem view of the lake: partition counts, sizes, freshness."""
 
