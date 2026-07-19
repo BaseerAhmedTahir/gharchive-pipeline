@@ -174,6 +174,25 @@ def _metrics_glob(cfg: Config) -> str | None:
     return f"{cfg.metrics_dir.as_posix()}/date=*/*.json"
 
 
+# Explicit schema for metric records — same principle as the transform's
+# bronze read: fields a record lacks become NULL, unknown fields are ignored.
+# (union_by_name=true over hundreds of small files OOMs: duckdb holds
+# per-file schema-union state; an explicit schema keeps memory flat.)
+_METRICS_COLUMNS = """{
+    'kind': 'VARCHAR', 'hour': 'VARCHAR', 'recorded_at': 'VARCHAR',
+    'duration_seconds': 'DOUBLE', 'rows_in': 'BIGINT', 'rows_out': 'BIGINT',
+    'bytes_out': 'BIGINT', 'bytes_downloaded': 'BIGINT', 'skipped': 'BOOLEAN',
+    'rows': 'BIGINT', 'soft_warnings': 'BIGINT'
+}"""
+
+
+def _read_metrics(glob: str) -> str:
+    return (
+        f"read_json('{glob}', format='auto', maximum_object_size=32768, "
+        f"columns={_METRICS_COLUMNS})"
+    )
+
+
 def run_metrics(con, cfg: Config) -> list[dict]:
     """Per-run task metrics history (empty before the first instrumented run)."""
     glob = _metrics_glob(cfg)
@@ -183,7 +202,7 @@ def run_metrics(con, cfg: Config) -> list[dict]:
         con.execute(
             f"""SELECT kind, CAST(hour AS TIMESTAMP) AS hour, duration_seconds,
                        rows_in, rows_out, bytes_downloaded
-                FROM read_json('{glob}', format='auto', union_by_name=true)
+                FROM {_read_metrics(glob)}
                 WHERE kind IN ('ingest', 'transform', 'quality_gate')
                 ORDER BY hour, kind"""
         )
@@ -202,7 +221,7 @@ def throughput_summary(con, cfg: Config) -> dict | None:
             median(duration_seconds) FILTER (kind = 'transform'),
             sum(bytes_downloaded) FILTER (kind = 'ingest') / 1e9,
             count(*) FILTER (kind = 'ingest' AND skipped = false)
-        FROM read_json('{glob}', format='auto', union_by_name=true)
+        FROM {_read_metrics(glob)}
         """
     ).fetchone()
     return {

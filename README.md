@@ -27,6 +27,18 @@ Airflow 3 (Docker Compose, LocalExecutor):
   gharchive_daily:   build_gold -> prune_retention           (@daily)
 ```
 
+## Dashboard
+
+| Overview | Trending repos |
+|---|---|
+| ![Overview](docs/img/dashboard-overview.png) | ![Trending](docs/img/dashboard-trending.png) |
+
+The **Pipeline ops** page is the meta-feature: the pipeline reports on itself
+(freshness lag, per-run task durations, transform throughput, bytes ingested,
+lake sizes on disk) from metrics records every DAG run writes.
+
+![Pipeline ops](docs/img/dashboard-ops.png)
+
 ## Measured numbers (not estimates)
 
 All numbers below are measured by the pipeline itself (`pipeline/metrics.py` records

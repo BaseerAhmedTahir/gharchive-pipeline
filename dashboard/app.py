@@ -46,8 +46,11 @@ def type_color_scale(order: list[str]) -> alt.Scale:
     return alt.Scale(domain=order, range=colors)
 
 
+PAGES = ["Overview", "Trending repos", "Pull requests", "Pipeline ops"]
+# deep-linkable pages: ?page=Pipeline+ops selects a page directly
+_requested = st.query_params.get("page", PAGES[0])
 page = st.sidebar.radio(
-    "Page", ["Overview", "Trending repos", "Pull requests", "Pipeline ops"]
+    "Page", PAGES, index=PAGES.index(_requested) if _requested in PAGES else 0
 )
 st.sidebar.caption(
     "GH Archive -> DuckDB -> Parquet, orchestrated by Airflow. "
