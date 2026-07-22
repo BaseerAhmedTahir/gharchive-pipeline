@@ -7,7 +7,9 @@ for hourly PR aggregates, and daily is the honest resolution for trends):
 - repo_activity_daily: per-repo daily activity (events, pushes, actors, bots)
 - trending_repos:      daily human (non-bot) activity vs trailing 7-day
                        baseline; scored only where the trailing window is
-                       fully inside the silver retention window
+                       fully inside the silver retention window AND the
+                       baseline clears a floor (newcomer repos surge off
+                       near-zero denominators otherwise)
 - pr_stats_daily:      PR lifecycle per day: opened/closed counts + hours-open
                        latency (join: opened event -> closed event on
                        repo+number). NOT merge stats: 2026 GH Archive slimmed
@@ -134,7 +136,10 @@ def build_gold(cfg: Config | None = None) -> GoldBuildResult:
             )
             SELECT event_date, repo_name, human_events, human_actors,
                    baseline_7d, window_complete,
-                   CASE WHEN window_complete AND baseline_7d > 0
+                   -- scored only against an established baseline: newcomers
+                   -- (baseline below the floor) stay in the mart unscored
+                   CASE WHEN window_complete
+                             AND baseline_7d >= {cfg.trending_min_baseline}
                         THEN human_events / baseline_7d END AS trend_score
             FROM scored
             WHERE human_events >= {cfg.trending_min_daily_events}

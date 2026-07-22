@@ -52,6 +52,12 @@ class Config:
     # Trending mart: minimum human (non-bot) events per day before a repo is
     # scored — avoids huge trend ratios on tiny denominators.
     trending_min_daily_events: int = 20
+    # Minimum trailing-7-day baseline (events/day) before a trend_score is
+    # computed. Without it, brand-new repos with near-zero history dominate
+    # the leaderboard at 100x+ off denominators like 0.1 — real surges, but
+    # "newcomer detection", not "established repo breaking out". 2.0 means
+    # >= 14 human events across the prior week. Set to 0 to score newcomers.
+    trending_min_baseline: float = 2.0
 
     @property
     def bronze_dir(self) -> Path:

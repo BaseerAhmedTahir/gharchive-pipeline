@@ -166,6 +166,37 @@ def test_pr_lifecycle_counts_and_hours_open(cfg):
     assert d2["median_hours_open"] == pytest.approx(26.0)
 
 
+def test_trending_leaves_newcomers_unscored(cfg):
+    # An established repo provides 10 days of history (fixes the global
+    # min-date); a newcomer appears only on day 9 with a big spike. The
+    # newcomer's window is "complete" but its baseline (~0) is below the
+    # floor: it must appear in the mart WITHOUT a trend score, not at 100x.
+    for d in range(10):
+        day = DAY0 + timedelta(days=d)
+        rows = [
+            silver_row(f"{d}-{i}", day, repo_name="steady/repo",
+                       actor_login=f"user{i}") for i in range(30)
+        ]
+        if d == 9:
+            rows += [
+                silver_row(f"new-{i}", day, repo_name="brand/new",
+                           actor_login=f"newbie{i % 3}") for i in range(25)
+            ]
+        write_silver(cfg, day, rows)
+
+    build_gold(cfg=cfg)
+    rows = read_mart(cfg, "trending_repos", "event_date, repo_name")
+
+    newcomer = next(r for r in rows if r["repo_name"] == "brand/new")
+    assert newcomer["window_complete"]
+    assert newcomer["trend_score"] is None  # baseline below floor
+    steady_day9 = next(
+        r for r in rows
+        if r["repo_name"] == "steady/repo" and str(r["event_date"]) == "2026-07-10"
+    )
+    assert steady_day9["trend_score"] == pytest.approx(1.0)
+
+
 def test_trending_excludes_single_actor_firehoses(cfg):
     # 9 days x 30 events/day, all from ONE non-[bot] login: a bot by
     # behavior. The >= 2 human actors guard must exclude it.

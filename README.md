@@ -150,6 +150,11 @@ failure to debug.
 until the full window is inside retained data (`window_complete`), and the baseline
 is `sum/7`, not `avg` — `avg` over only-active days inflates the denominator for
 bursty repos and suppresses exactly the spikes a trending mart exists to catch.
+A third guard came from watching real output: without a **baseline floor**, the
+leaderboard was dominated by brand-new repos at 100-1200x off near-zero denominators
+— real surges, but newcomer detection, not "established repo breaking out". Scores
+require `baseline_7d >= 2` (14+ human events in the prior week); newcomers stay in
+the mart, visibly unscored. One config value flips the semantics back.
 
 ## What the data forced (findings from looking, not assuming)
 
